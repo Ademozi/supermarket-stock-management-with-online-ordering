@@ -40,4 +40,9 @@ public class ProductController {
     public Product updateProduct(@PathVariable Long id, @RequestBody Product product) {
         return service.updateProduct(id, product);
     }
+
+    @GetMapping("/barcode/{barcode}")
+    public Product getByBarcode(@PathVariable String barcode) {
+        return service.findByBarcode(barcode);
+    }
 }

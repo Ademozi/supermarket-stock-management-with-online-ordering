@@ -45,4 +45,8 @@ public class ProductService {
 
         return repository.save(product);
     }
+
+    public Product findByBarcode(String barcode) {
+        return repository.findByBarcode(barcode);
+    }
 }

@@ -47,6 +47,14 @@ public class MainApp extends Application {
 
         });
 
+        // Barcode Search Field
+        TextField barcodeSearchField = new TextField();
+        barcodeSearchField.setPromptText("Scan barcode...");
+
+        Button barcodeSearchButton = new Button("Search");
+
+
+        //Table
         TableColumn<Product, String> nameCol =
                 new TableColumn<>("Name");
         nameCol.setCellValueFactory(data ->
@@ -137,9 +145,36 @@ public class MainApp extends Application {
             }
         });
 
-        HBox hbox = new HBox(10, refreshBtn, deleteButton, updateButton);
+        barcodeSearchButton.setOnAction(e -> {
 
-        VBox root = new VBox(10, table, form, hbox);
+            try {
+
+                String barcode = barcodeSearchField.getText();
+
+                Product product = ApiClient.getProductByBarcode(barcode);
+
+                if (product != null) {
+                    table.getItems().setAll(product);
+                }
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+        });
+
+        HBox hbox = new HBox(10,
+                refreshBtn,
+                deleteButton,
+                updateButton);
+
+        HBox searchBox = new HBox(10,
+                new Label("Barcode:"),
+                barcodeSearchField,
+                barcodeSearchButton
+        );
+
+        VBox root = new VBox(10,searchBox, table, form, hbox);
 
         stage.setScene(new Scene(root, 600, 400));
         stage.setTitle("Supermarket Stock");

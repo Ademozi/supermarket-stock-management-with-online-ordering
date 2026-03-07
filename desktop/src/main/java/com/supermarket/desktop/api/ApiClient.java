@@ -83,4 +83,21 @@ public class ApiClient {
 
         client.send(request, HttpResponse.BodyHandlers.ofString());
     }
+
+    public static Product getProductByBarcode(String barcode) throws Exception {
+
+        HttpClient client = HttpClient.newHttpClient();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/barcode/" + barcode))
+                .GET()
+                .build();
+
+        HttpResponse<String> response =
+                client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        return mapper.readValue(response.body(), Product.class);
+    }
 }
