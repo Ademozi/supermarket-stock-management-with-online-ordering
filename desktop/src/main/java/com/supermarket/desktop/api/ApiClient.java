@@ -100,4 +100,22 @@ public class ApiClient {
 
         return mapper.readValue(response.body(), Product.class);
     }
+
+    public static List<Product> getLowStockProducts() throws Exception {
+
+        HttpClient client = HttpClient.newHttpClient();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/low-stock"))
+                .GET()
+                .build();
+
+        HttpResponse<String> response =
+                client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        return mapper.readValue(response.body(),
+                new TypeReference<List<Product>>() {});
+    }
 }

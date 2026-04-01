@@ -53,6 +53,23 @@ public class MainApp extends Application {
 
         Button barcodeSearchButton = new Button("Search");
 
+        // LOW STOCK
+        Button lowStockButton = new Button("Low Stock Alerts");
+
+        lowStockButton.setOnAction(e -> {
+
+            try {
+
+                List<Product> lowStock = ApiClient.getLowStockProducts();
+
+                table.getItems().setAll(lowStock);
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+        });
+
 
         //Table
         TableColumn<Product, String> nameCol =
@@ -163,10 +180,12 @@ public class MainApp extends Application {
 
         });
 
+        // LAYOUT
         HBox hbox = new HBox(10,
                 refreshBtn,
                 deleteButton,
-                updateButton);
+                updateButton,
+                lowStockButton);
 
         HBox searchBox = new HBox(10,
                 new Label("Barcode:"),

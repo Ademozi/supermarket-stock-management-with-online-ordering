@@ -45,4 +45,9 @@ public class ProductController {
     public Product getByBarcode(@PathVariable String barcode) {
         return service.findByBarcode(barcode);
     }
+
+    @GetMapping("/low-stock")
+    public List<Product> getLowStockProducts() {
+        return service.getLowStockProducts();
+    }
 }

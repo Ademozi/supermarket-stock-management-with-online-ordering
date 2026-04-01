@@ -49,4 +49,8 @@ public class ProductService {
     public Product findByBarcode(String barcode) {
         return repository.findByBarcode(barcode);
     }
+
+    public List<Product> getLowStockProducts() {
+        return repository.findByQuantityLessThan(5);
+    }
 }
