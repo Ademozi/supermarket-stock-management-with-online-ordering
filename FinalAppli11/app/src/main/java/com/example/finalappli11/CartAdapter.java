@@ -37,7 +37,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
         Product p = cartList.get(position);
 
         // Affichage du nom et du prix
-        holder.name.setText(p.getNom());
+        holder.name.setText(p.getName());
         holder.price.setText(p.getPrice() + " DA");
 
         // Gestion du bouton supprimer (croix rouge)

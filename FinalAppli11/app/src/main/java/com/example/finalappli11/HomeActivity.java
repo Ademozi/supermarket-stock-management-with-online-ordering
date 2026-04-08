@@ -10,9 +10,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class HomeActivity extends AppCompatActivity {
     private RecyclerView rv;
-    private List<Product> allProducts;
+    private List<Product> allProducts = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,10 +24,9 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         rv = findViewById(R.id.rvProducts);
-        allProducts = ProductData.getProducts();
         rv.setLayoutManager(new LinearLayoutManager(this));
 
-        updateList(allProducts);
+        loadProducts();
 
         // Configuration des boutons de catégories
         findViewById(R.id.btnAll).setOnClickListener(v -> updateList(allProducts));
@@ -38,6 +41,25 @@ public class HomeActivity extends AppCompatActivity {
                 startActivity(new Intent(this, CartActivity.class)));
     }
 
+    private void loadProducts() {
+        RetrofitClient.getService().getProducts().enqueue(new Callback<List<Product>>() {
+            @Override
+            public void onResponse(Call<List<Product>> call, Response<List<Product>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    allProducts = response.body();
+                    updateList(allProducts);
+                } else {
+                    Toast.makeText(HomeActivity.this, "Erreur serveur", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Product>> call, Throwable t) {
+                Toast.makeText(HomeActivity.this, "Erreur de connexion : " + t.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
     private void filter(String cat) {
         List<Product> f = new ArrayList<>();
         for(Product p : allProducts) {
@@ -49,7 +71,7 @@ public class HomeActivity extends AppCompatActivity {
     private void updateList(List<Product> l) {
         rv.setAdapter(new ProductAdapter(l, p -> {
             CartManager.ajouterProduit(p);
-            Toast.makeText(this, p.getNom() + " ajouté !", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, p.getName() + " ajouté !", Toast.LENGTH_SHORT).show();
         }));
     }
 }
