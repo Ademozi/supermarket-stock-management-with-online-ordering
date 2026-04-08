@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#00796B">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center"
+        android:background="#DDDDDD"
+        android:layout_marginBottom="20dp"
+        />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=" choose a category"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp"
+        android:textColor="#FFFFFF"
+        android:textAlignment="center"/>
+
+
+    <Button
+        android:id="@+id/filter_fruits"
+        android:backgroundTint="#FFFFFF"
+        android:textColor="#00796B"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Fruits"
+        app:cornerRadius="300px"
+        android:layout_marginBottom="10dp"
+
+
+        />
+
+    <Button
+        android:id="@+id/filter_legumes"
+        android:backgroundTint="#FFFFFF"
+        android:textColor="#00796B"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Legumes"
+        app:cornerRadius="300px"
+        android:layout_marginBottom="10dp"
+
+
+        />
+
+
+    <Button
+        android:id="@+id/filter_boissons"
+        android:backgroundTint="#FFFFFF"
+        android:textColor="#00796B"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Boissons"
+        app:cornerRadius="300px"
+        android:layout_marginBottom="10dp"
+
+
+        />
+
+
+
+    <Button
+        android:id="@+id/filter_all"
+        android:backgroundTint="#00796B"
+        android:textColor="#FFFFFF"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="SHOW ALL PRODUCTS"
+        app:cornerRadius="300px"
+        android:layout_marginBottom="10dp"
+
+
+        />
+
+
+
+</LinearLayout>
+
