@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#009688">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MyShop - Rayons"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <HorizontalScrollView
+        android:id="@+id/categoryScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/header"
+        android:padding="8dp"
+        android:scrollbars="none">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btnAll" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tout" android:layout_marginEnd="5dp" />
+            <Button android:id="@+id/btnCatBase" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Base" android:layout_marginEnd="5dp" />
+            <Button android:id="@+id/btnCatPates" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pâtes" android:layout_marginEnd="5dp" />
+            <Button android:id="@+id/btnCatLait" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Laitiers" android:layout_marginEnd="5dp" />
+            <Button android:id="@+id/btnCatEpicerie" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Épicerie" android:layout_marginEnd="5dp" />
+            <Button android:id="@+id/btnCatHygiene" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hygiène" android:layout_marginEnd="5dp" />
+            <Button android:id="@+id/btnCatScolaire" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Scolaire" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvProducts"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/categoryScroll"
+        android:layout_above="@+id/btnNavCart"
+        android:padding="5dp" />
+
+    <Button
+        android:id="@+id/btnNavCart"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="VOIR LE PANIER"
+        android:layout_alignParentBottom="true"
+        android:backgroundTint="#009688"
+        android:textStyle="bold" />
+
+</RelativeLayout>

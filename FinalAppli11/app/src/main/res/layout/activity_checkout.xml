@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Finaliser la commande"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#009688"
+        android:layout_marginBottom="30dp"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Adresse de livraison" android:textStyle="bold"/>
+    <EditText
+        android:id="@+id/etAddress"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:hint="Cité, Rue, Wilaya"
+        android:background="@android:drawable/editbox_background"
+        android:layout_marginBottom="20dp"
+        android:padding="10dp"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mode de paiement" android:textStyle="bold"/>
+    <RadioGroup
+        android:id="@+id/rgPayment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="15dp">
+        <RadioButton android:id="@+id/rbCash" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Paiement à la livraison" android:checked="true"/>
+        <RadioButton android:id="@+id/rbCard" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Carte CIB / Dahabia"/>
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btnConfirmOrder"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="CONFIRMER L'ACHAT"
+        android:backgroundTint="#009688"
+        android:textColor="@android:color/white"
+        android:layout_marginTop="30dp"/>
+</LinearLayout>
