@@ -31,6 +31,13 @@
             <version>2.17.0</version>
         </dependency>
 
+        <!-- Required to deserialize LocalDateTime from the API -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.17.0</version>
+        </dependency>
+
     </dependencies>
 
 </project>
