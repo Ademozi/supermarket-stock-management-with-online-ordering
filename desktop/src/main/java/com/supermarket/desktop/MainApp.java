@@ -5,10 +5,16 @@ import com.supermarket.desktop.model.CustomerOrder;
 import com.supermarket.desktop.model.Product;
 import javafx.application.Platform;
 import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import java.util.List;
@@ -21,54 +27,347 @@ public class MainApp extends Application {
     private TableView<Product> table = new TableView<>();
     private TableView<CustomerOrder> orderTable = new TableView<>();
     private ScheduledExecutorService scheduler;
+    private Label statusLabel = new Label("Ready");
+
+    // ── PALETTE ──────────────────────────────────────────────────────────────
+    private static final String BG_DARK      = "#0f1117";
+    private static final String BG_SURFACE   = "#1a1d27";
+    private static final String BG_CARD      = "#21253a";
+    private static final String BG_INPUT     = "#2a2f45";
+    private static final String ACCENT       = "#4f8ef7";
+    private static final String ACCENT_HOVER = "#3a7cf5";
+    private static final String SUCCESS      = "#2ecc87";
+    private static final String WARNING      = "#f5a623";
+    private static final String DANGER       = "#e05252";
+    private static final String TEXT_PRIMARY = "#e8eaf6";
+    private static final String TEXT_MUTED   = "#8890a8";
+    private static final String BORDER       = "#2e3350";
+
+    // ── CSS ───────────────────────────────────────────────────────────────────
+    private static final String CSS = """
+        .root {
+            -fx-font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            -fx-font-size: 13px;
+            -fx-background-color: #0f1117;
+        }
+        .tab-pane {
+            -fx-background-color: #0f1117;
+        }
+        .tab-pane .tab-header-area {
+            -fx-padding: 0 0 0 0;
+        }
+        .tab-pane .tab-header-background {
+            -fx-background-color: #1a1d27;
+            -fx-border-color: transparent transparent #2e3350 transparent;
+            -fx-border-width: 0 0 1 0;
+        }
+        .tab {
+            -fx-background-color: transparent;
+            -fx-padding: 10 24 10 24;
+            -fx-cursor: hand;
+        }
+        .tab:selected {
+            -fx-background-color: #0f1117;
+            -fx-border-color: transparent transparent #4f8ef7 transparent;
+            -fx-border-width: 0 0 2 0;
+        }
+        .tab .tab-label {
+            -fx-text-fill: #8890a8;
+            -fx-font-size: 13px;
+            -fx-font-weight: normal;
+        }
+        .tab:selected .tab-label {
+            -fx-text-fill: #e8eaf6;
+            -fx-font-weight: bold;
+        }
+        .tab-content-area {
+            -fx-background-color: #0f1117;
+            -fx-padding: 0;
+        }
+        .table-view {
+            -fx-background-color: #1a1d27;
+            -fx-border-color: #2e3350;
+            -fx-border-radius: 8;
+            -fx-background-radius: 8;
+            -fx-table-cell-border-color: #2e3350;
+        }
+        .table-view .column-header-background {
+            -fx-background-color: #21253a;
+            -fx-background-radius: 8 8 0 0;
+        }
+        .table-view .column-header {
+            -fx-background-color: transparent;
+            -fx-border-color: transparent transparent #2e3350 transparent;
+            -fx-border-width: 0 0 1 0;
+            -fx-size: 38;
+        }
+        .table-view .column-header .label {
+            -fx-text-fill: #8890a8;
+            -fx-font-size: 11px;
+            -fx-font-weight: bold;
+            -fx-padding: 0 12 0 12;
+        }
+        .table-row-cell {
+            -fx-background-color: #1a1d27;
+            -fx-border-color: transparent transparent #2e3350 transparent;
+            -fx-border-width: 0 0 1 0;
+            -fx-cell-size: 40px;
+        }
+        .table-row-cell:odd {
+            -fx-background-color: #1e2133;
+        }
+        .table-row-cell:selected {
+            -fx-background-color: rgba(79,142,247,0.15);
+            -fx-border-color: transparent transparent #4f8ef7 transparent;
+        }
+        .table-row-cell:hover {
+            -fx-background-color: rgba(79,142,247,0.08);
+        }
+        .table-cell {
+            -fx-text-fill: #e8eaf6;
+            -fx-padding: 0 12 0 12;
+            -fx-font-size: 13px;
+        }
+        .table-row-cell:selected .table-cell {
+            -fx-text-fill: #e8eaf6;
+        }
+        .table-view .corner {
+            -fx-background-color: #21253a;
+        }
+        .table-view:focused {
+            -fx-border-color: #4f8ef7;
+        }
+        .scroll-bar:vertical,
+        .scroll-bar:horizontal {
+            -fx-background-color: #1a1d27;
+            -fx-border-color: transparent;
+        }
+        .scroll-bar .thumb {
+            -fx-background-color: #2e3350;
+            -fx-background-radius: 4;
+        }
+        .scroll-bar .thumb:hover {
+            -fx-background-color: #4f8ef7;
+        }
+        .scroll-bar .increment-button,
+        .scroll-bar .decrement-button {
+            -fx-background-color: transparent;
+            -fx-padding: 0;
+        }
+        .text-field {
+            -fx-background-color: #2a2f45;
+            -fx-border-color: #2e3350;
+            -fx-border-radius: 6;
+            -fx-background-radius: 6;
+            -fx-text-fill: #e8eaf6;
+            -fx-prompt-text-fill: #8890a8;
+            -fx-padding: 8 12 8 12;
+            -fx-font-size: 13px;
+        }
+        .text-field:focused {
+            -fx-border-color: #4f8ef7;
+            -fx-border-width: 1.5;
+        }
+        .label {
+            -fx-text-fill: #8890a8;
+            -fx-font-size: 11px;
+            -fx-font-weight: bold;
+        }
+        .primary-btn {
+            -fx-background-color: #4f8ef7;
+            -fx-text-fill: white;
+            -fx-background-radius: 6;
+            -fx-border-radius: 6;
+            -fx-padding: 8 18 8 18;
+            -fx-font-size: 13px;
+            -fx-font-weight: bold;
+            -fx-cursor: hand;
+            -fx-border-color: transparent;
+        }
+        .primary-btn:hover {
+            -fx-background-color: #3a7cf5;
+        }
+        .primary-btn:pressed {
+            -fx-background-color: #2a6cf0;
+        }
+        .danger-btn {
+            -fx-background-color: rgba(224,82,82,0.15);
+            -fx-text-fill: #e05252;
+            -fx-background-radius: 6;
+            -fx-border-radius: 6;
+            -fx-border-color: #e05252;
+            -fx-border-width: 1;
+            -fx-padding: 8 18 8 18;
+            -fx-font-size: 13px;
+            -fx-cursor: hand;
+        }
+        .danger-btn:hover {
+            -fx-background-color: rgba(224,82,82,0.28);
+        }
+        .ghost-btn {
+            -fx-background-color: #2a2f45;
+            -fx-text-fill: #e8eaf6;
+            -fx-background-radius: 6;
+            -fx-border-radius: 6;
+            -fx-border-color: #2e3350;
+            -fx-border-width: 1;
+            -fx-padding: 8 18 8 18;
+            -fx-font-size: 13px;
+            -fx-cursor: hand;
+        }
+        .ghost-btn:hover {
+            -fx-background-color: #353a55;
+        }
+        .success-btn {
+            -fx-background-color: rgba(46,204,135,0.15);
+            -fx-text-fill: #2ecc87;
+            -fx-background-radius: 6;
+            -fx-border-radius: 6;
+            -fx-border-color: #2ecc87;
+            -fx-border-width: 1;
+            -fx-padding: 8 18 8 18;
+            -fx-font-size: 13px;
+            -fx-cursor: hand;
+        }
+        .success-btn:hover {
+            -fx-background-color: rgba(46,204,135,0.28);
+        }
+        .warning-btn {
+            -fx-background-color: rgba(245,166,35,0.15);
+            -fx-text-fill: #f5a623;
+            -fx-background-radius: 6;
+            -fx-border-radius: 6;
+            -fx-border-color: #f5a623;
+            -fx-border-width: 1;
+            -fx-padding: 8 18 8 18;
+            -fx-font-size: 13px;
+            -fx-cursor: hand;
+        }
+        .warning-btn:hover {
+            -fx-background-color: rgba(245,166,35,0.28);
+        }
+        .section-title {
+            -fx-font-size: 15px;
+            -fx-font-weight: bold;
+            -fx-text-fill: #e8eaf6;
+        }
+        .status-bar {
+            -fx-background-color: #1a1d27;
+            -fx-border-color: #2e3350 transparent transparent transparent;
+            -fx-border-width: 1 0 0 0;
+            -fx-padding: 6 16 6 16;
+        }
+        .status-label {
+            -fx-text-fill: #8890a8;
+            -fx-font-size: 12px;
+        }
+        .sidebar {
+            -fx-background-color: #1a1d27;
+            -fx-border-color: transparent #2e3350 transparent transparent;
+            -fx-border-width: 0 1 0 0;
+            -fx-padding: 16;
+            -fx-pref-width: 220;
+            -fx-min-width: 220;
+        }
+        .form-card {
+            -fx-background-color: #21253a;
+            -fx-background-radius: 8;
+            -fx-border-radius: 8;
+            -fx-border-color: #2e3350;
+            -fx-border-width: 1;
+            -fx-padding: 16;
+        }
+        .toolbar {
+            -fx-background-color: #1a1d27;
+            -fx-border-color: transparent transparent #2e3350 transparent;
+            -fx-border-width: 0 0 1 0;
+            -fx-padding: 12 16 12 16;
+        }
+    """;
 
     @Override
     public void start(Stage stage) throws Exception {
+        TabPane tabPane = new TabPane(buildProductsTab(), buildOrdersTab());
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
-        // ── PRODUCT FORM FIELDS ──
-        TextField nameField     = new TextField();
-        TextField priceField    = new TextField();
-        TextField quantityField = new TextField();
-        TextField barcodeField  = new TextField();
-        TextField categoryField = new TextField();
+        // Status bar
+        HBox statusBar = new HBox(statusLabel);
+        statusBar.getStyleClass().add("status-bar");
+        statusLabel.getStyleClass().add("status-label");
 
-        // ── PRODUCT TABLE COLUMNS ──
-        TableColumn<Product, String> nameCol = new TableColumn<>("Name");
-        nameCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().getName()));
+        VBox root = new VBox(tabPane, statusBar);
+        VBox.setVgrow(tabPane, Priority.ALWAYS);
 
-        TableColumn<Product, String> priceCol = new TableColumn<>("Price");
-        priceCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(String.valueOf(data.getValue().getPrice())));
+        Scene scene = new Scene(root, 1100, 700);
 
-        TableColumn<Product, String> qtyCol = new TableColumn<>("Quantity");
-        qtyCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(String.valueOf(data.getValue().getQuantity())));
+        // Apply CSS via a temp file (JavaFX requires a URL, not inline strings)
+        applyCSS(scene);
 
-        TableColumn<Product, String> categoryCol = new TableColumn<>("Category");
-        categoryCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().getCategory()));
+        stage.setScene(scene);
+        stage.setTitle("Supermarket Admin");
+        stage.show();
 
-        TableColumn<Product, String> barcodeCol = new TableColumn<>("Barcode");
-        barcodeCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().getBarcode()));
+        loadProducts();
+        loadOrders();
 
-        table.getColumns().addAll(nameCol, priceCol, qtyCol, categoryCol, barcodeCol);
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(
+                () -> Platform.runLater(this::loadOrders),
+                10, 10, TimeUnit.SECONDS
+        );
+    }
 
-        // Fill form when a product row is selected
-        table.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) -> {
-            if (selected != null) {
-                nameField.setText(selected.getName());
-                priceField.setText(String.valueOf(selected.getPrice()));
-                quantityField.setText(String.valueOf(selected.getQuantity()));
-                barcodeField.setText(selected.getBarcode());
-                categoryField.setText(selected.getCategory());
+    private void applyCSS(Scene scene) {
+        try {
+            java.io.File tmp = java.io.File.createTempFile("supermarket", ".css");
+            tmp.deleteOnExit();
+            java.nio.file.Files.writeString(tmp.toPath(), CSS);
+            scene.getStylesheets().add(tmp.toURI().toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ── PRODUCTS TAB ─────────────────────────────────────────────────────────
+
+    private Tab buildProductsTab() {
+        // ── Form Fields ──
+        TextField nameField     = styledField("Product name");
+        TextField priceField    = styledField("0.00");
+        TextField quantityField = styledField("0");
+        TextField barcodeField  = styledField("Barcode");
+        TextField categoryField = styledField("Category");
+
+        // ── Table ──
+        setupProductTable();
+        table.getSelectionModel().selectedItemProperty().addListener((obs, old, sel) -> {
+            if (sel != null) {
+                nameField.setText(sel.getName());
+                priceField.setText(String.valueOf(sel.getPrice()));
+                quantityField.setText(String.valueOf(sel.getQuantity()));
+                barcodeField.setText(sel.getBarcode());
+                categoryField.setText(sel.getCategory());
             }
         });
 
-        // ── ADD ──
-        Button addButton = new Button("Add Product");
-        addButton.setOnAction(e -> {
+        // ── Form Card (sidebar) ──
+        Label formTitle = new Label("PRODUCT DETAILS");
+        formTitle.getStyleClass().add("section-title");
+
+        VBox form = new VBox(10,
+                formTitle,
+                fieldGroup("NAME", nameField),
+                fieldGroup("PRICE (DA)", priceField),
+                fieldGroup("QUANTITY", quantityField),
+                fieldGroup("BARCODE", barcodeField),
+                fieldGroup("CATEGORY", categoryField)
+        );
+        form.getStyleClass().add("form-card");
+
+        Button addBtn = new Button("＋  Add Product");
+        addBtn.getStyleClass().add("primary-btn");
+        addBtn.setMaxWidth(Double.MAX_VALUE);
+        addBtn.setOnAction(e -> {
             try {
                 Product p = new Product();
                 p.setName(nameField.getText());
@@ -78,169 +377,240 @@ public class MainApp extends Application {
                 p.setCategory(categoryField.getText());
                 ApiClient.addProduct(p);
                 loadProducts();
-            } catch (Exception ex) { ex.printStackTrace(); }
+                setStatus("Product added successfully.");
+            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
-        // ── UPDATE ──
-        Button updateButton = new Button("Update");
-        updateButton.setOnAction(e -> {
-            Product selected = table.getSelectionModel().getSelectedItem();
-            if (selected == null) return;
+        Button updateBtn = new Button("✎  Update");
+        updateBtn.getStyleClass().add("ghost-btn");
+        updateBtn.setMaxWidth(Double.MAX_VALUE);
+        updateBtn.setOnAction(e -> {
+            Product sel = table.getSelectionModel().getSelectedItem();
+            if (sel == null) { setStatus("Select a product first."); return; }
             try {
-                selected.setName(nameField.getText());
-                selected.setPrice(Double.parseDouble(priceField.getText()));
-                selected.setQuantity(Integer.parseInt(quantityField.getText()));
-                selected.setBarcode(barcodeField.getText());
-                selected.setCategory(categoryField.getText());
-                ApiClient.updateProduct(selected);
+                sel.setName(nameField.getText());
+                sel.setPrice(Double.parseDouble(priceField.getText()));
+                sel.setQuantity(Integer.parseInt(quantityField.getText()));
+                sel.setBarcode(barcodeField.getText());
+                sel.setCategory(categoryField.getText());
+                ApiClient.updateProduct(sel);
                 loadProducts();
-            } catch (Exception ex) { ex.printStackTrace(); }
+                setStatus("Product updated.");
+            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
-        // ── DELETE ──
-        Button deleteButton = new Button("Delete");
-        deleteButton.setOnAction(e -> {
-            Product selected = table.getSelectionModel().getSelectedItem();
-            if (selected == null) return;
+        Button deleteBtn = new Button("✕  Delete");
+        deleteBtn.getStyleClass().add("danger-btn");
+        deleteBtn.setMaxWidth(Double.MAX_VALUE);
+        deleteBtn.setOnAction(e -> {
+            Product sel = table.getSelectionModel().getSelectedItem();
+            if (sel == null) { setStatus("Select a product first."); return; }
             try {
-                ApiClient.deleteProduct(selected.getId());
+                ApiClient.deleteProduct(sel.getId());
                 loadProducts();
-            } catch (Exception ex) { ex.printStackTrace(); }
+                setStatus("Product deleted.");
+            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
-        // ── BARCODE SEARCH ──
-        TextField barcodeSearchField = new TextField();
-        barcodeSearchField.setPromptText("Scan barcode...");
-        Button barcodeSearchButton = new Button("Search");
-        barcodeSearchButton.setOnAction(e -> {
+        VBox sidebar = new VBox(12, form, addBtn, updateBtn, deleteBtn);
+        sidebar.getStyleClass().add("sidebar");
+
+        // ── Toolbar (search + low stock + refresh) ──
+        TextField barcodeSearch = styledField("Scan or type barcode...");
+        barcodeSearch.setPrefWidth(240);
+        Button searchBtn = new Button("Search");
+        searchBtn.getStyleClass().add("ghost-btn");
+        searchBtn.setOnAction(e -> {
             try {
-                Product product = ApiClient.getProductByBarcode(barcodeSearchField.getText());
-                if (product != null) table.getItems().setAll(product);
-            } catch (Exception ex) { ex.printStackTrace(); }
+                Product p = ApiClient.getProductByBarcode(barcodeSearch.getText());
+                if (p != null) { table.getItems().setAll(p); setStatus("Product found."); }
+                else setStatus("No product found for that barcode.");
+            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
-        // ── LOW STOCK ──
-        Button lowStockButton = new Button("Low Stock Alerts");
-        lowStockButton.setOnAction(e -> {
+        Button lowStockBtn = new Button("⚠  Low Stock");
+        lowStockBtn.getStyleClass().add("warning-btn");
+        lowStockBtn.setOnAction(e -> {
             try {
                 table.getItems().setAll(ApiClient.getLowStockProducts());
-            } catch (Exception ex) { ex.printStackTrace(); }
+                setStatus("Showing low-stock products.");
+            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
-        // ── REFRESH PRODUCTS ──
-        Button refreshBtn = new Button("Refresh");
-        refreshBtn.setOnAction(e -> loadProducts());
+        Button refreshBtn = new Button("↻  Refresh");
+        refreshBtn.getStyleClass().add("ghost-btn");
+        refreshBtn.setOnAction(e -> { loadProducts(); setStatus("Products refreshed."); });
 
-        // ── PRODUCT LAYOUT ──
-        VBox form = new VBox(4,
-                new Label("Name"),     nameField,
-                new Label("Price"),    priceField,
-                new Label("Quantity"), quantityField,
-                new Label("Barcode"),  barcodeField,
-                new Label("Category"), categoryField,
-                addButton
-        );
-        HBox productButtons = new HBox(10, refreshBtn, deleteButton, updateButton, lowStockButton);
-        HBox searchBox      = new HBox(10, new Label("Barcode:"), barcodeSearchField, barcodeSearchButton);
-        VBox productsLayout = new VBox(10, searchBox, table, form, productButtons);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Tab productsTab = new Tab("Products", productsLayout);
-        productsTab.setClosable(false);
+        HBox toolbar = new HBox(10, barcodeSearch, searchBtn, spacer, lowStockBtn, refreshBtn);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.getStyleClass().add("toolbar");
+        toolbar.setPadding(new Insets(10, 16, 10, 16));
 
-        // ── ORDER TABLE COLUMNS ──
-        TableColumn<CustomerOrder, String> orderIdCol = new TableColumn<>("ID");
-        orderIdCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(String.valueOf(data.getValue().getId())));
+        VBox tableArea = new VBox(toolbar, table);
+        VBox.setVgrow(table, Priority.ALWAYS);
+        VBox.setVgrow(tableArea, Priority.ALWAYS);
 
-        TableColumn<CustomerOrder, String> clientCol = new TableColumn<>("Client");
-        clientCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().getClientName()));
+        HBox content = new HBox(tableArea, sidebar);
+        HBox.setHgrow(tableArea, Priority.ALWAYS);
+        content.setStyle("-fx-background-color: #0f1117;");
 
-        TableColumn<CustomerOrder, String> itemsCol = new TableColumn<>("Items");
-        itemsCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().getItems()));
-        itemsCol.setPrefWidth(250);
+        Tab tab = new Tab("  Products  ", content);
+        tab.setClosable(false);
+        return tab;
+    }
 
-        TableColumn<CustomerOrder, String> totalCol = new TableColumn<>("Total (DA)");
-        totalCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(
-                        String.format("%.2f", data.getValue().getTotal())));
+    private void setupProductTable() {
+        table.setStyle("-fx-background-color: #1a1d27;");
+        table.setPlaceholder(new Label("No products loaded"));
 
-        TableColumn<CustomerOrder, String> statusCol = new TableColumn<>("Status");
-        statusCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().getStatus()));
+        TableColumn<Product, String> nameCol = col("NAME", 180, p -> p.getName());
+        TableColumn<Product, String> catCol  = col("CATEGORY", 140, p -> p.getCategory());
+        TableColumn<Product, String> priceCol = col("PRICE (DA)", 110, p ->
+                String.format("%.2f", p.getPrice()));
+        TableColumn<Product, String> qtyCol  = col("QTY", 80, p -> {
+            int q = p.getQuantity();
+            return String.valueOf(q);
+        });
+        TableColumn<Product, String> barCol  = col("BARCODE", 140, p -> p.getBarcode());
 
-        TableColumn<CustomerOrder, String> dateCol = new TableColumn<>("Date");
-        dateCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().getCreatedAt()));
+        // Color-code quantity column
+        qtyCol.setCellFactory(tc -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setStyle(""); return; }
+                setText(item);
+                try {
+                    int q = Integer.parseInt(item);
+                    if (q == 0) setStyle("-fx-text-fill: #e05252; -fx-font-weight: bold;");
+                    else if (q < 5) setStyle("-fx-text-fill: #f5a623; -fx-font-weight: bold;");
+                    else setStyle("-fx-text-fill: #2ecc87;");
+                } catch (NumberFormatException ex) { setStyle(""); }
+            }
+        });
 
-        orderTable.getColumns().addAll(orderIdCol, clientCol, itemsCol, totalCol, statusCol, dateCol);
+        table.getColumns().addAll(nameCol, catCol, priceCol, qtyCol, barCol);
+        VBox.setVgrow(table, Priority.ALWAYS);
+    }
 
-        // ── ORDER BUTTONS ──
-        Button confirmBtn     = new Button("Mark Confirmed");
-        Button doneBtn        = new Button("Mark Done");
-        Button refreshOrders  = new Button("Refresh Orders");
+    // ── ORDERS TAB ────────────────────────────────────────────────────────────
 
+    private Tab buildOrdersTab() {
+        setupOrderTable();
+
+        Button confirmBtn = new Button("✔  Mark Confirmed");
+        confirmBtn.getStyleClass().add("success-btn");
         confirmBtn.setOnAction(e -> {
-            CustomerOrder selected = orderTable.getSelectionModel().getSelectedItem();
-            if (selected == null) return;
-            try {
-                ApiClient.updateOrderStatus(selected.getId(), "CONFIRMED");
-                loadOrders();
-            } catch (Exception ex) { ex.printStackTrace(); }
+            CustomerOrder sel = orderTable.getSelectionModel().getSelectedItem();
+            if (sel == null) { setStatus("Select an order first."); return; }
+            try { ApiClient.updateOrderStatus(sel.getId(), "CONFIRMED"); loadOrders(); setStatus("Order confirmed."); }
+            catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
+        Button doneBtn = new Button("✔✔  Mark Done");
+        doneBtn.getStyleClass().add("primary-btn");
         doneBtn.setOnAction(e -> {
-            CustomerOrder selected = orderTable.getSelectionModel().getSelectedItem();
-            if (selected == null) return;
-            try {
-                ApiClient.updateOrderStatus(selected.getId(), "DONE");
-                loadOrders();
-            } catch (Exception ex) { ex.printStackTrace(); }
+            CustomerOrder sel = orderTable.getSelectionModel().getSelectedItem();
+            if (sel == null) { setStatus("Select an order first."); return; }
+            try { ApiClient.updateOrderStatus(sel.getId(), "DONE"); loadOrders(); setStatus("Order marked as done."); }
+            catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
-        refreshOrders.setOnAction(e -> loadOrders());
+        Button refreshBtn = new Button("↻  Refresh Orders");
+        refreshBtn.getStyleClass().add("ghost-btn");
+        refreshBtn.setOnAction(e -> { loadOrders(); setStatus("Orders refreshed."); });
 
-        HBox orderButtons = new HBox(10, refreshOrders, confirmBtn, doneBtn);
-        VBox ordersLayout = new VBox(10, orderTable, orderButtons);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Tab ordersTab = new Tab("Orders", ordersLayout);
-        ordersTab.setClosable(false);
+        HBox toolbar = new HBox(10, spacer, refreshBtn, confirmBtn, doneBtn);
+        toolbar.setAlignment(Pos.CENTER_RIGHT);
+        toolbar.getStyleClass().add("toolbar");
+        toolbar.setPadding(new Insets(10, 16, 10, 16));
 
-        // Reload orders when the tab is opened
-        ordersTab.setOnSelectionChanged(e -> {
-            if (ordersTab.isSelected()) loadOrders();
+        VBox layout = new VBox(toolbar, orderTable);
+        VBox.setVgrow(orderTable, Priority.ALWAYS);
+        layout.setStyle("-fx-background-color: #0f1117;");
+
+        Tab tab = new Tab("  Orders  ", layout);
+        tab.setClosable(false);
+        tab.setOnSelectionChanged(e -> { if (tab.isSelected()) loadOrders(); });
+        return tab;
+    }
+
+    private void setupOrderTable() {
+        orderTable.setPlaceholder(new Label("No orders yet"));
+
+        TableColumn<CustomerOrder, String> idCol     = col("ID", 60, o -> String.valueOf(o.getId()));
+        TableColumn<CustomerOrder, String> clientCol = col("CLIENT", 140, o -> o.getClientName());
+        TableColumn<CustomerOrder, String> itemsCol  = col("ITEMS", 300, o -> o.getItems());
+        TableColumn<CustomerOrder, String> totalCol  = col("TOTAL (DA)", 110, o ->
+                String.format("%.2f", o.getTotal()));
+        TableColumn<CustomerOrder, String> dateCol   = col("DATE", 160, o -> o.getCreatedAt());
+        TableColumn<CustomerOrder, String> statusCol = col("STATUS", 120, o -> o.getStatus());
+
+        // Status badge coloring
+        statusCol.setCellFactory(tc -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setStyle(""); return; }
+                setText(item);
+                switch (item.toUpperCase()) {
+                    case "CONFIRMED" -> setStyle("-fx-text-fill: #2ecc87; -fx-font-weight: bold;");
+                    case "DONE"      -> setStyle("-fx-text-fill: #4f8ef7; -fx-font-weight: bold;");
+                    case "PENDING"   -> setStyle("-fx-text-fill: #f5a623; -fx-font-weight: bold;");
+                    default          -> setStyle("-fx-text-fill: #8890a8;");
+                }
+            }
         });
 
-        // ── TAB PANE ──
-        TabPane tabPane = new TabPane(productsTab, ordersTab);
+        orderTable.getColumns().addAll(idCol, clientCol, itemsCol, totalCol, statusCol, dateCol);
+        VBox.setVgrow(orderTable, Priority.ALWAYS);
+    }
 
-        stage.setScene(new Scene(tabPane, 900, 600));
-        stage.setTitle("Supermarket Admin");
-        stage.show();
+    // ── HELPERS ──────────────────────────────────────────────────────────────
 
-        loadProducts();
-        loadOrders();
+    private <S> TableColumn<S, String> col(String title, double width,
+                                           java.util.function.Function<S, String> extractor) {
+        TableColumn<S, String> c = new TableColumn<>(title);
+        c.setPrefWidth(width);
+        c.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(extractor.apply(data.getValue())));
+        return c;
+    }
 
-        // Auto-refresh orders every 10 seconds
-        scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(
-                () -> Platform.runLater(this::loadOrders),
-                10, 10, TimeUnit.SECONDS
-        );
+    private TextField styledField(String prompt) {
+        TextField tf = new TextField();
+        tf.setPromptText(prompt);
+        tf.setMaxWidth(Double.MAX_VALUE);
+        return tf;
+    }
+
+    private VBox fieldGroup(String labelText, TextField field) {
+        Label lbl = new Label(labelText);
+        VBox group = new VBox(4, lbl, field);
+        return group;
     }
 
     private void loadProducts() {
         try {
             table.getItems().setAll(ApiClient.getAllProducts());
-        } catch (Exception e) { e.printStackTrace(); }
+            setStatus("Products loaded  ·  " + table.getItems().size() + " items");
+        } catch (Exception e) { setStatus("Failed to load products: " + e.getMessage()); }
     }
 
     private void loadOrders() {
         try {
             List<CustomerOrder> orders = ApiClient.getOrders();
             orderTable.getItems().setAll(orders);
-        } catch (Exception e) { e.printStackTrace(); }
+            setStatus("Orders loaded  ·  " + orders.size() + " orders");
+        } catch (Exception e) { setStatus("Failed to load orders: " + e.getMessage()); }
+    }
+
+    private void setStatus(String msg) {
+        Platform.runLater(() -> statusLabel.setText(msg));
     }
 
     @Override
