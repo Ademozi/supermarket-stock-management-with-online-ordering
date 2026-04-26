@@ -13,10 +13,24 @@ import java.net.http.HttpResponse;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * ApiClient communicates with the REMOTE server (your productapi Spring Boot app).
+ *
+ * IMPORTANT: This class is now used ONLY by SyncService.
+ * It is NOT used directly by the UI anymore.
+ *
+ * The flow is:
+ *   UI button → LocalDatabase (write locally) → SyncService → ApiClient → Remote server
+ *
+ * Change SERVER_IP below to your actual server IP address when you deploy.
+ */
 public class ApiClient {
 
-    private static final String BASE_URL = "http://localhost:8080/products";
-    private static final String ORDERS_URL = "http://localhost:8080/orders";
+    // ✅ Change this to your server's static IP when you deploy to a real server
+    // For local testing, keep it as localhost
+    private static final String SERVER_IP   = "localhost";
+    private static final String BASE_URL    = "http://" + SERVER_IP + ":8080/products";
+    private static final String ORDERS_URL  = "http://" + SERVER_IP + ":8080/orders";
 
     private static final HttpClient client = HttpClient.newHttpClient();
     private static final ObjectMapper mapper = new ObjectMapper()

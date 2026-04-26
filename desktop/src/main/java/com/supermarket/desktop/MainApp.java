@@ -1,8 +1,10 @@
 package com.supermarket.desktop;
 
 import com.supermarket.desktop.api.ApiClient;
+import com.supermarket.desktop.db.LocalDatabase;
 import com.supermarket.desktop.model.CustomerOrder;
 import com.supermarket.desktop.model.Product;
+import com.supermarket.desktop.sync.SyncService;
 import javafx.application.Platform;
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -287,10 +289,13 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
+
+        // ✅ STEP 1: Initialize the local MySQL database (creates tables if needed)
+        LocalDatabase.initialize();
+
         TabPane tabPane = new TabPane(buildProductsTab(), buildOrdersTab());
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
-        // Status bar
         HBox statusBar = new HBox(statusLabel);
         statusBar.getStyleClass().add("status-bar");
         statusLabel.getStyleClass().add("status-label");
@@ -299,22 +304,24 @@ public class MainApp extends Application {
         VBox.setVgrow(tabPane, Priority.ALWAYS);
 
         Scene scene = new Scene(root, 1100, 700);
-
-        // Apply CSS via a temp file (JavaFX requires a URL, not inline strings)
         applyCSS(scene);
 
         stage.setScene(scene);
         stage.setTitle("Supermarket Admin");
         stage.show();
 
+        // ✅ STEP 2: Load data from the LOCAL database on startup
         loadProducts();
         loadOrders();
 
+        // ✅ STEP 3: Every 10 seconds, pull new orders from the server
+        // (orders placed by the mobile app land in the server DB;
+        //  we bring them down into the local DB so we can manage them here)
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(
-                () -> Platform.runLater(this::loadOrders),
-                10, 10, TimeUnit.SECONDS
-        );
+        scheduler.scheduleAtFixedRate(() -> {
+            SyncService.pullOrdersFromServer();
+            Platform.runLater(this::loadOrders);
+        }, 10, 10, TimeUnit.SECONDS);
     }
 
     private void applyCSS(Scene scene) {
@@ -331,14 +338,12 @@ public class MainApp extends Application {
     // ── PRODUCTS TAB ─────────────────────────────────────────────────────────
 
     private Tab buildProductsTab() {
-        // ── Form Fields ──
         TextField nameField     = styledField("Product name");
         TextField priceField    = styledField("0.00");
         TextField quantityField = styledField("0");
         TextField barcodeField  = styledField("Barcode");
         TextField categoryField = styledField("Category");
 
-        // ── Table ──
         setupProductTable();
         table.getSelectionModel().selectedItemProperty().addListener((obs, old, sel) -> {
             if (sel != null) {
@@ -350,7 +355,6 @@ public class MainApp extends Application {
             }
         });
 
-        // ── Form Card (sidebar) ──
         Label formTitle = new Label("PRODUCT DETAILS");
         formTitle.getStyleClass().add("section-title");
 
@@ -364,6 +368,7 @@ public class MainApp extends Application {
         );
         form.getStyleClass().add("form-card");
 
+        // ✅ ADD: saves to LOCAL DB first, then syncs to server
         Button addBtn = new Button("＋  Add Product");
         addBtn.getStyleClass().add("primary-btn");
         addBtn.setMaxWidth(Double.MAX_VALUE);
@@ -375,12 +380,19 @@ public class MainApp extends Application {
                 p.setQuantity(Integer.parseInt(quantityField.getText()));
                 p.setBarcode(barcodeField.getText());
                 p.setCategory(categoryField.getText());
-                ApiClient.addProduct(p);
+
+                // 1. Write to local MySQL
+                LocalDatabase.addProduct(p);
+
+                // 2. Push to server MySQL in background (so UI never freezes)
+                SyncService.pushProductAdd(p);
+
                 loadProducts();
-                setStatus("Product added successfully.");
+                setStatus("Product added to local DB and syncing to server...");
             } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
+        // ✅ UPDATE: saves to LOCAL DB first, then syncs to server
         Button updateBtn = new Button("✎  Update");
         updateBtn.getStyleClass().add("ghost-btn");
         updateBtn.setMaxWidth(Double.MAX_VALUE);
@@ -393,12 +405,19 @@ public class MainApp extends Application {
                 sel.setQuantity(Integer.parseInt(quantityField.getText()));
                 sel.setBarcode(barcodeField.getText());
                 sel.setCategory(categoryField.getText());
-                ApiClient.updateProduct(sel);
+
+                // 1. Write to local MySQL
+                LocalDatabase.updateProduct(sel);
+
+                // 2. Push to server MySQL in background
+                SyncService.pushProductUpdate(sel);
+
                 loadProducts();
-                setStatus("Product updated.");
+                setStatus("Product updated in local DB and syncing to server...");
             } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
+        // ✅ DELETE: deletes from LOCAL DB first, then syncs to server
         Button deleteBtn = new Button("✕  Delete");
         deleteBtn.getStyleClass().add("danger-btn");
         deleteBtn.setMaxWidth(Double.MAX_VALUE);
@@ -406,35 +425,39 @@ public class MainApp extends Application {
             Product sel = table.getSelectionModel().getSelectedItem();
             if (sel == null) { setStatus("Select a product first."); return; }
             try {
-                ApiClient.deleteProduct(sel.getId());
+                Long id = sel.getId();
+
+                // 1. Delete from local MySQL
+                LocalDatabase.deleteProduct(id);
+
+                // 2. Push delete to server MySQL in background
+                SyncService.pushProductDelete(id);
+
                 loadProducts();
-                setStatus("Product deleted.");
+                setStatus("Product deleted from local DB and syncing to server...");
             } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
         VBox sidebar = new VBox(12, form, addBtn, updateBtn, deleteBtn);
         sidebar.getStyleClass().add("sidebar");
 
-        // ── Toolbar (search + low stock + refresh) ──
+        // ✅ BARCODE SEARCH: now queries the local DB, no API call needed
         TextField barcodeSearch = styledField("Scan or type barcode...");
         barcodeSearch.setPrefWidth(240);
         Button searchBtn = new Button("Search");
         searchBtn.getStyleClass().add("ghost-btn");
         searchBtn.setOnAction(e -> {
-            try {
-                Product p = ApiClient.getProductByBarcode(barcodeSearch.getText());
-                if (p != null) { table.getItems().setAll(p); setStatus("Product found."); }
-                else setStatus("No product found for that barcode.");
-            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
+            Product p = LocalDatabase.findByBarcode(barcodeSearch.getText());
+            if (p != null) { table.getItems().setAll(p); setStatus("Product found."); }
+            else setStatus("No product found for that barcode.");
         });
 
+        // ✅ LOW STOCK: now queries the local DB, no API call needed
         Button lowStockBtn = new Button("⚠  Low Stock");
         lowStockBtn.getStyleClass().add("warning-btn");
         lowStockBtn.setOnAction(e -> {
-            try {
-                table.getItems().setAll(ApiClient.getLowStockProducts());
-                setStatus("Showing low-stock products.");
-            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
+            table.getItems().setAll(LocalDatabase.getLowStockProducts());
+            setStatus("Showing low-stock products.");
         });
 
         Button refreshBtn = new Button("↻  Refresh");
@@ -466,17 +489,12 @@ public class MainApp extends Application {
         table.setStyle("-fx-background-color: #1a1d27;");
         table.setPlaceholder(new Label("No products loaded"));
 
-        TableColumn<Product, String> nameCol = col("NAME", 180, p -> p.getName());
-        TableColumn<Product, String> catCol  = col("CATEGORY", 140, p -> p.getCategory());
-        TableColumn<Product, String> priceCol = col("PRICE (DA)", 110, p ->
-                String.format("%.2f", p.getPrice()));
-        TableColumn<Product, String> qtyCol  = col("QTY", 80, p -> {
-            int q = p.getQuantity();
-            return String.valueOf(q);
-        });
-        TableColumn<Product, String> barCol  = col("BARCODE", 140, p -> p.getBarcode());
+        TableColumn<Product, String> nameCol  = col("NAME",       180, p -> p.getName());
+        TableColumn<Product, String> catCol   = col("CATEGORY",   140, p -> p.getCategory());
+        TableColumn<Product, String> priceCol = col("PRICE (DA)", 110, p -> String.format("%.2f", p.getPrice()));
+        TableColumn<Product, String> qtyCol   = col("QTY",         80, p -> String.valueOf(p.getQuantity()));
+        TableColumn<Product, String> barCol   = col("BARCODE",    140, p -> p.getBarcode());
 
-        // Color-code quantity column
         qtyCol.setCellFactory(tc -> new TableCell<>() {
             @Override protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -484,9 +502,9 @@ public class MainApp extends Application {
                 setText(item);
                 try {
                     int q = Integer.parseInt(item);
-                    if (q == 0) setStyle("-fx-text-fill: #e05252; -fx-font-weight: bold;");
-                    else if (q < 5) setStyle("-fx-text-fill: #f5a623; -fx-font-weight: bold;");
-                    else setStyle("-fx-text-fill: #2ecc87;");
+                    if      (q == 0) setStyle("-fx-text-fill: #e05252; -fx-font-weight: bold;");
+                    else if (q <  5) setStyle("-fx-text-fill: #f5a623; -fx-font-weight: bold;");
+                    else             setStyle("-fx-text-fill: #2ecc87;");
                 } catch (NumberFormatException ex) { setStyle(""); }
             }
         });
@@ -500,22 +518,32 @@ public class MainApp extends Application {
     private Tab buildOrdersTab() {
         setupOrderTable();
 
+        // ✅ CONFIRM: updates local DB first, then syncs to server
         Button confirmBtn = new Button("✔  Mark Confirmed");
         confirmBtn.getStyleClass().add("success-btn");
         confirmBtn.setOnAction(e -> {
             CustomerOrder sel = orderTable.getSelectionModel().getSelectedItem();
             if (sel == null) { setStatus("Select an order first."); return; }
-            try { ApiClient.updateOrderStatus(sel.getId(), "CONFIRMED"); loadOrders(); setStatus("Order confirmed."); }
-            catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
+            try {
+                LocalDatabase.updateOrderStatus(sel.getId(), "CONFIRMED");
+                SyncService.pushOrderStatus(sel.getId(), "CONFIRMED");
+                loadOrders();
+                setStatus("Order confirmed.");
+            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
+        // ✅ DONE: updates local DB first, then syncs to server
         Button doneBtn = new Button("✔✔  Mark Done");
         doneBtn.getStyleClass().add("primary-btn");
         doneBtn.setOnAction(e -> {
             CustomerOrder sel = orderTable.getSelectionModel().getSelectedItem();
             if (sel == null) { setStatus("Select an order first."); return; }
-            try { ApiClient.updateOrderStatus(sel.getId(), "DONE"); loadOrders(); setStatus("Order marked as done."); }
-            catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
+            try {
+                LocalDatabase.updateOrderStatus(sel.getId(), "DONE");
+                SyncService.pushOrderStatus(sel.getId(), "DONE");
+                loadOrders();
+                setStatus("Order marked as done.");
+            } catch (Exception ex) { setStatus("Error: " + ex.getMessage()); }
         });
 
         Button refreshBtn = new Button("↻  Refresh Orders");
@@ -543,15 +571,13 @@ public class MainApp extends Application {
     private void setupOrderTable() {
         orderTable.setPlaceholder(new Label("No orders yet"));
 
-        TableColumn<CustomerOrder, String> idCol     = col("ID", 60, o -> String.valueOf(o.getId()));
-        TableColumn<CustomerOrder, String> clientCol = col("CLIENT", 140, o -> o.getClientName());
-        TableColumn<CustomerOrder, String> itemsCol  = col("ITEMS", 300, o -> o.getItems());
-        TableColumn<CustomerOrder, String> totalCol  = col("TOTAL (DA)", 110, o ->
-                String.format("%.2f", o.getTotal()));
-        TableColumn<CustomerOrder, String> dateCol   = col("DATE", 160, o -> o.getCreatedAt());
-        TableColumn<CustomerOrder, String> statusCol = col("STATUS", 120, o -> o.getStatus());
+        TableColumn<CustomerOrder, String> idCol     = col("ID",         60,  o -> String.valueOf(o.getId()));
+        TableColumn<CustomerOrder, String> clientCol = col("CLIENT",     140, o -> o.getClientName());
+        TableColumn<CustomerOrder, String> itemsCol  = col("ITEMS",      300, o -> o.getItems());
+        TableColumn<CustomerOrder, String> totalCol  = col("TOTAL (DA)", 110, o -> String.format("%.2f", o.getTotal()));
+        TableColumn<CustomerOrder, String> dateCol   = col("DATE",       160, o -> o.getCreatedAt());
+        TableColumn<CustomerOrder, String> statusCol = col("STATUS",     120, o -> o.getStatus());
 
-        // Status badge coloring
         statusCol.setCellFactory(tc -> new TableCell<>() {
             @Override protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -594,19 +620,22 @@ public class MainApp extends Application {
         return group;
     }
 
+    // ✅ loadProducts reads from LOCAL MySQL, not the remote API
     private void loadProducts() {
-        try {
-            table.getItems().setAll(ApiClient.getAllProducts());
-            setStatus("Products loaded  ·  " + table.getItems().size() + " items");
-        } catch (Exception e) { setStatus("Failed to load products: " + e.getMessage()); }
+        List<Product> products = LocalDatabase.getAllProducts();
+        Platform.runLater(() -> {
+            table.getItems().setAll(products);
+            setStatus("Products loaded  ·  " + products.size() + " items  [local DB]");
+        });
     }
 
+    // ✅ loadOrders reads from LOCAL MySQL (kept in sync by the scheduler)
     private void loadOrders() {
-        try {
-            List<CustomerOrder> orders = ApiClient.getOrders();
+        List<CustomerOrder> orders = LocalDatabase.getAllOrders();
+        Platform.runLater(() -> {
             orderTable.getItems().setAll(orders);
-            setStatus("Orders loaded  ·  " + orders.size() + " orders");
-        } catch (Exception e) { setStatus("Failed to load orders: " + e.getMessage()); }
+            setStatus("Orders loaded  ·  " + orders.size() + " orders  [local DB]");
+        });
     }
 
     private void setStatus(String msg) {
